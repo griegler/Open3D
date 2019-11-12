@@ -307,6 +307,11 @@ void pybind_trianglemesh(py::module &m) {
                     "radius over the point cloud, whenever the ball touches "
                     "three points a triangle is created.",
                     "pcd"_a, "radii"_a)
+            .def_static(
+                    "create_from_point_cloud_poisson",
+                    &geometry::TriangleMesh::CreateFromPointCloudPoisson,
+                    "TODO",
+                    "pcd"_a)
             .def_static("create_box", &geometry::TriangleMesh::CreateBox,
                         "Factory function to create a box. The left bottom "
                         "corner on the "
@@ -562,6 +567,11 @@ void pybind_trianglemesh(py::module &m) {
              {"radii",
               "The radii of the ball that are used for the surface "
               "reconstruction."}});
+    docstring::ClassMethodDocInject(
+            m, "TriangleMesh", "create_from_point_cloud_poisson",
+            {{"pcd",
+              "PointCloud from whicht the TriangleMesh surface is "
+              "reconstructed. Has to contain normals."}});
     docstring::ClassMethodDocInject(m, "TriangleMesh", "create_box",
                                     {{"width", "x-directional length."},
                                      {"height", "y-directional length."},

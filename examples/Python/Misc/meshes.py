@@ -41,7 +41,8 @@ def triangle():
                     (-np.sqrt(2 / 9), -np.sqrt(2 / 3), -1 / 3),
                 ],
                 dtype=np.float32,
-            )),
+            )
+        ),
         triangles=o3d.utility.Vector3iVector(np.array([[0, 1, 2]])),
     )
     mesh.compute_vertex_normals()
@@ -51,8 +52,8 @@ def triangle():
 def plane():
     mesh = o3d.geometry.TriangleMesh(
         vertices=o3d.utility.Vector3dVector(
-            np.array([[0, 0, 0], [0, 0.2, 0], [1, 0.2, 0], [1, 0, 0]],
-                     dtype=np.float32)),
+            np.array([[0, 0, 0], [0, 0.2, 0], [1, 0.2, 0], [1, 0, 0]], dtype=np.float32)
+        ),
         triangles=o3d.utility.Vector3iVector(np.array([[0, 2, 1], [2, 0, 3]])),
     )
     mesh.compute_vertex_normals()
@@ -60,8 +61,9 @@ def plane():
 
 
 def non_manifold_edge():
-    verts = np.array([[-1, 0, 0], [0, 1, 0], [1, 0, 0], [0, -1, 0], [0, 0, 1]],
-                     dtype=np.float64)
+    verts = np.array(
+        [[-1, 0, 0], [0, 1, 0], [1, 0, 0], [0, -1, 0], [0, 0, 1]], dtype=np.float64
+    )
     triangles = np.array([[0, 1, 3], [1, 2, 3], [1, 3, 4]])
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(verts)
@@ -83,16 +85,18 @@ def non_manifold_vertex():
         ],
         dtype=np.float64,
     )
-    triangles = np.array([
-        [0, 1, 2],
-        [0, 1, 3],
-        [1, 2, 3],
-        [2, 0, 3],
-        [4, 5, 6],
-        [4, 5, 3],
-        [5, 6, 3],
-        [4, 6, 3],
-    ])
+    triangles = np.array(
+        [
+            [0, 1, 2],
+            [0, 1, 3],
+            [1, 2, 3],
+            [2, 0, 3],
+            [4, 5, 6],
+            [4, 5, 3],
+            [5, 6, 3],
+            [4, 6, 3],
+        ]
+    )
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(verts)
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
@@ -131,8 +135,7 @@ def knot():
 
 
 def bathtub():
-    mesh = o3d.io.read_triangle_mesh(
-        _relative_path("../../TestData/bathtub_0154.ply"))
+    mesh = o3d.io.read_triangle_mesh(_relative_path("../../TestData/bathtub_0154.ply"))
     mesh.compute_vertex_normals()
     return mesh
 
@@ -163,8 +166,9 @@ def bunny():
         with tarfile.open(bunny_path + ".tar.gz") as tar:
             tar.extractall(path=os.path.dirname(bunny_path))
         shutil.move(
-            os.path.join(os.path.dirname(bunny_path), "bunny", "reconstruction",
-                         "bun_zipper.ply"),
+            os.path.join(
+                os.path.dirname(bunny_path), "bunny", "reconstruction", "bun_zipper.ply"
+            ),
             bunny_path,
         )
         os.remove(bunny_path + ".tar.gz")
@@ -172,6 +176,16 @@ def bunny():
     mesh = o3d.io.read_triangle_mesh(bunny_path)
     mesh.compute_vertex_normals()
     return mesh
+
+
+def eagle():
+    path = _relative_path("../../TestData/eagle.ply")
+    if not os.path.exists(path):
+        print("downloading eagle pcl")
+        url = "http://www.cs.jhu.edu/~misha/Code/PoissonRecon/eagle.points.ply"
+        urllib.request.urlretrieve(url, path)
+    pcd = o3d.io.read_point_cloud(path)
+    return pcd
 
 
 def center_and_scale(mesh):
@@ -183,22 +197,21 @@ def center_and_scale(mesh):
 
 
 def print_mesh_for_cpp(mesh, prefix=""):
-
     def _print(prefix, values, fmt):
         if values.shape[0] > 0:
             print(f"{prefix} = {{")
-            print(",\n".join([
-                f"  {{{v[0]:{fmt}}, {v[1]:{fmt}}, {v[2]:{fmt}}}}"
-                for v in values
-            ]))
+            print(
+                ",\n".join(
+                    [f"  {{{v[0]:{fmt}}, {v[1]:{fmt}}, {v[2]:{fmt}}}}" for v in values]
+                )
+            )
             print(f"}};")
 
     _print(f"{prefix}vertices_", np.asarray(mesh.vertices), ".6f")
     _print(f"{prefix}vertex_normals_", np.asarray(mesh.vertex_normals), ".6f")
     _print(f"{prefix}vertex_colors_", np.asarray(mesh.vertex_colors), ".6f")
     _print(f"{prefix}triangles_", np.asarray(mesh.triangles), "d")
-    _print(f"{prefix}triangle_normals_", np.asarray(mesh.triangle_normals),
-           ".6f")
+    _print(f"{prefix}triangle_normals_", np.asarray(mesh.triangle_normals), ".6f")
 
 
 def print_1D_array_for_cpp(array, prefix="vec"):

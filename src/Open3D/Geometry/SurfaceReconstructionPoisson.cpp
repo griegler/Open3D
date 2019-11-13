@@ -36,30 +36,31 @@ typedef Eigen::Matrix<double, 6, 1> Open3DData;
 
 class Open3DPointStream : public InputPointStreamWithData<double, DIMENSION, Open3DData> {
 public:
-    Open3DPointStream(const open3d::geometry::PointCloud& pcd) : pcd_(pcd), current_(0) {}
+    Open3DPointStream() {}
+    Open3DPointStream(const open3d::geometry::PointCloud* pcd) : pcd_(pcd), current_(0) {}
     void reset(void) { current_ = 0; }
     bool nextPoint(Point<double, 3>& p, Open3DData& d) {
-        if (current_ >= pcd_.points_.size()) {
+        if (current_ >= pcd_->points_.size()) {
             return false;
         }
-        p.coords[0] = pcd_.points_[current_](0);
-        p.coords[1] = pcd_.points_[current_](1);
-        p.coords[2] = pcd_.points_[current_](2);
+        p.coords[0] = pcd_->points_[current_](0);
+        p.coords[1] = pcd_->points_[current_](1);
+        p.coords[2] = pcd_->points_[current_](2);
 
-        if (pcd_.HasNormals()) {
-            d(0) = pcd_.normals_[current_](0);
-            d(1) = pcd_.normals_[current_](1);
-            d(2) = pcd_.normals_[current_](2);
+        if (pcd_->HasNormals()) {
+            d(0) = pcd_->normals_[current_](0);
+            d(1) = pcd_->normals_[current_](1);
+            d(2) = pcd_->normals_[current_](2);
         } else {
             d(0) = 0;
             d(1) = 0;
             d(2) = 0;
         }
 
-        if (pcd_.HasColors()) {
-            d(3) = pcd_.colors_[current_](0);
-            d(4) = pcd_.colors_[current_](1);
-            d(5) = pcd_.colors_[current_](2);
+        if (pcd_->HasColors()) {
+            d(3) = pcd_->colors_[current_](0);
+            d(4) = pcd_->colors_[current_](1);
+            d(5) = pcd_->colors_[current_](2);
         } else {
             d(3) = 0;
             d(4) = 0;
@@ -73,8 +74,39 @@ public:
     }
 
 public:
-    const open3d::geometry::PointCloud& pcd_;
+    const open3d::geometry::PointCloud* pcd_;
     size_t current_;
+};
+
+class Open3DVertex {
+public:
+    typedef double Real;
+
+    Open3DVertex(Point<double, 3> point) : point(point) {}
+    Open3DVertex() {}
+    virtual ~Open3DVertex() {}
+
+    Open3DVertex& operator*=(double s) {
+        point *= s;
+        data *= s;
+        return *this;
+    }
+
+    Open3DVertex& operator+=(const Open3DVertex& p) {
+        point += p.point;
+        data += p.data;
+        return *this;
+    }
+
+    Open3DVertex& operator/=(double s) {
+        point /= s;
+        data /= s;
+        return *this;
+    }
+
+public:
+    Point<double, 3> point;
+    Eigen::Matrix<double, 7, 1> data;
 };
 
 double Weight(double v, double start, double end) {
@@ -379,7 +411,7 @@ void Execute(const open3d::geometry::PointCloud& pcd,
 
     // Read in the samples (and color data)
     {
-        Open3DPointStream pointStream(pcd);
+        Open3DPointStream pointStream(&pcd);
 
         if (width > 0)
             xForm = GetPointXForm<Real, Dim>(pointStream, width, (Real)(scale > 0 ? scale : 1.),
@@ -582,8 +614,7 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         // messageWriter("Iso-Value: %e = %g / %g\n", isoValue, valueSum, weightSum);
     }
 
-    typedef PlyVertexWithData<Real, Dim, Eigen::Matrix<double, 7, 1>> Vertex;
-    auto SetVertex = [](Vertex& v, Point<Real, Dim> p, Real w, Open3DData d) {
+    auto SetVertex = [](Open3DVertex& v, Point<Real, Dim> p, Real w, Open3DData d) {
         v.point = p;
         v.data(0) = d(0);
         v.data(1) = d(1);
@@ -593,8 +624,8 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         v.data(5) = d(5);
         v.data(6) = w;
     };
-    ExtractMesh<Vertex>(UIntPack<FEMSigs...>(), std::tuple<SampleData...>(), tree, solution,
-                        isoValue, samples, sampleData, density, SetVertex, iXForm, out_mesh);
+    ExtractMesh<Open3DVertex>(UIntPack<FEMSigs...>(), std::tuple<SampleData...>(), tree, solution,
+                              isoValue, samples, sampleData, density, SetVertex, iXForm, out_mesh);
     if (sampleData) {
         delete sampleData;
         sampleData = NULL;
@@ -676,16 +707,16 @@ std::shared_ptr<TriangleMesh> TriangleMesh::CreateFromPointCloudPoisson(const Po
     typedef IsotropicUIntPack<DIMENSION, FEMDegreeAndBType</* Degree */ 1, BType>::Signature>
             FEMSigs;
 
+#ifdef _OPENMP
     ThreadPool::Init((ThreadPool::ParallelType)(int)ThreadPool::OPEN_MP,
                      std::thread::hardware_concurrency());
+#else
+    ThreadPool::Init((ThreadPool::ParallelType)(int)ThreadPool::THREAD_POOL,
+                     std::thread::hardware_concurrency());
+#endif
 
     auto mesh = std::make_shared<TriangleMesh>();
-
-    if (pcd.HasColors()) {
-        Execute<double, PointStreamColor<double>>(pcd, mesh, FEMSigs());
-    } else {
-        Execute<double>(pcd, mesh, FEMSigs());
-    }
+    Execute<double>(pcd, mesh, FEMSigs());
 
     ThreadPool::Terminate();
 

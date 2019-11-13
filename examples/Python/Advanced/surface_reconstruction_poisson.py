@@ -10,8 +10,7 @@ import os
 
 import sys
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(dir_path, "../Misc"))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../Misc"))
 import meshes
 
 
@@ -19,7 +18,9 @@ if __name__ == "__main__":
     o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Debug)
 
     pcd = meshes.eagle()
+    print(pcd)
     # o3d.visualization.draw_geometries([pcd])
 
-    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd)
-    __import__("ipdb").set_trace()
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=10)
+    print(mesh)
+    o3d.visualization.draw_geometries([mesh])

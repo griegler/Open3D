@@ -47,26 +47,32 @@ public:
     TriangleMesh() : MeshBase(Geometry::GeometryType::TriangleMesh) {}
     TriangleMesh(const std::vector<Eigen::Vector3d> &vertices,
                  const std::vector<Eigen::Vector3i> &triangles)
-        : MeshBase(Geometry::GeometryType::TriangleMesh, vertices), triangles_(triangles) {}
+        : MeshBase(Geometry::GeometryType::TriangleMesh, vertices),
+          triangles_(triangles) {}
     ~TriangleMesh() override {}
 
 public:
     virtual TriangleMesh &Clear() override;
-    virtual TriangleMesh &Transform(const Eigen::Matrix4d &transformation) override;
-    virtual TriangleMesh &Rotate(const Eigen::Matrix3d &R, bool center = true) override;
+    virtual TriangleMesh &Transform(
+            const Eigen::Matrix4d &transformation) override;
+    virtual TriangleMesh &Rotate(const Eigen::Matrix3d &R,
+                                 bool center = true) override;
 
 public:
     TriangleMesh &operator+=(const TriangleMesh &mesh);
     TriangleMesh operator+(const TriangleMesh &mesh) const;
 
-    bool HasTriangles() const { return vertices_.size() > 0 && triangles_.size() > 0; }
+    bool HasTriangles() const {
+        return vertices_.size() > 0 && triangles_.size() > 0;
+    }
 
     bool HasTriangleNormals() const {
         return HasTriangles() && triangles_.size() == triangle_normals_.size();
     }
 
     bool HasAdjacencyList() const {
-        return vertices_.size() > 0 && adjacency_list_.size() == vertices_.size();
+        return vertices_.size() > 0 &&
+               adjacency_list_.size() == vertices_.size();
     }
 
     bool HasTriangleUvs() const {
@@ -129,9 +135,10 @@ public:
     /// $v_o = v_i x strength (v_i * |N| - \sum_{n \in N} v_n)$.
     /// \param number_of_iterations defines the number of repetitions
     /// of this operation.
-    std::shared_ptr<TriangleMesh> FilterSharpen(int number_of_iterations,
-                                                double strength,
-                                                FilterScope scope = FilterScope::All) const;
+    std::shared_ptr<TriangleMesh> FilterSharpen(
+            int number_of_iterations,
+            double strength,
+            FilterScope scope = FilterScope::All) const;
 
     /// Function to smooth triangle mesh with simple neighbour average.
     /// $v_o = \frac{v_i + \sum_{n \in N} v_n)}{|N| + 1}$, with $v_i$
@@ -139,8 +146,9 @@ public:
     /// set of adjacent neighbours.
     /// \param number_of_iterations defines the number of repetitions
     /// of this operation.
-    std::shared_ptr<TriangleMesh> FilterSmoothSimple(int number_of_iterations,
-                                                     FilterScope scope = FilterScope::All) const;
+    std::shared_ptr<TriangleMesh> FilterSmoothSimple(
+            int number_of_iterations,
+            FilterScope scope = FilterScope::All) const;
 
     /// Function to smooth triangle mesh using Laplacian.
     /// $v_o = v_i \cdot \lambda (sum_{n \in N} w_n v_n - v_i)$,
@@ -150,9 +158,10 @@ public:
     /// and \param lambda is the smoothing parameter.
     /// \param number_of_iterations defines the number of repetitions
     /// of this operation.
-    std::shared_ptr<TriangleMesh> FilterSmoothLaplacian(int number_of_iterations,
-                                                        double lambda,
-                                                        FilterScope scope = FilterScope::All) const;
+    std::shared_ptr<TriangleMesh> FilterSmoothLaplacian(
+            int number_of_iterations,
+            double lambda,
+            FilterScope scope = FilterScope::All) const;
 
     /// Function to smooth triangle mesh using method of Taubin,
     /// "Curve and Surface Smoothing Without Shrinkage", 1995.
@@ -161,10 +170,11 @@ public:
     /// This method avoids shrinkage of the triangle mesh.
     /// \param number_of_iterations defines the number of repetitions
     /// of this operation.
-    std::shared_ptr<TriangleMesh> FilterSmoothTaubin(int number_of_iterations,
-                                                     double lambda = 0.5,
-                                                     double mu = -0.53,
-                                                     FilterScope scope = FilterScope::All) const;
+    std::shared_ptr<TriangleMesh> FilterSmoothTaubin(
+            int number_of_iterations,
+            double lambda = 0.5,
+            double mu = -0.53,
+            FilterScope scope = FilterScope::All) const;
 
     /// Function that computes the Euler-Poincaré characteristic, i.e.,
     /// V + F - E, where V is the number of vertices, F is the number
@@ -174,7 +184,8 @@ public:
     /// Function that returns the non-manifold edges of the triangle mesh.
     /// If \param allow_boundary_edges is set to false, than also boundary
     /// edges are returned
-    std::vector<Eigen::Vector2i> GetNonManifoldEdges(bool allow_boundary_edges = true) const;
+    std::vector<Eigen::Vector2i> GetNonManifoldEdges(
+            bool allow_boundary_edges = true) const;
 
     /// Function that checks if the given triangle mesh is edge-manifold.
     /// A mesh is edge­-manifold if each edge is bounding either one or two
@@ -260,13 +271,15 @@ public:
 
     /// Function to sample \param number_of_points points uniformly from the
     /// mesh
-    std::shared_ptr<PointCloud> SamplePointsUniformlyImpl(size_t number_of_points,
-                                                          std::vector<double> &triangle_areas,
-                                                          double surface_area) const;
+    std::shared_ptr<PointCloud> SamplePointsUniformlyImpl(
+            size_t number_of_points,
+            std::vector<double> &triangle_areas,
+            double surface_area) const;
 
     /// Function to sample \param number_of_points points uniformly from the
     /// mesh
-    std::shared_ptr<PointCloud> SamplePointsUniformly(size_t number_of_points) const;
+    std::shared_ptr<PointCloud> SamplePointsUniformly(
+            size_t number_of_points) const;
 
     /// Function to sample \param number_of_points points (blue noise).
     /// Based on the method presented in Yuksel, "Sample Elimination for
@@ -282,7 +295,8 @@ public:
     /// Function to subdivide triangle mesh using the simple midpoint algorithm.
     /// Each triangle is subdivided into four triangles per iteration and the
     /// new vertices lie on the midpoint of the triangle edges.
-    std::shared_ptr<TriangleMesh> SubdivideMidpoint(int number_of_iterations) const;
+    std::shared_ptr<TriangleMesh> SubdivideMidpoint(
+            int number_of_iterations) const;
 
     /// Function to subdivide triangle mesh using Loop's scheme.
     /// Cf. Charles T. Loop, "Smooth subdivision surfaces based on triangles",
@@ -293,21 +307,25 @@ public:
     /// The result can be a non-manifold mesh.
     std::shared_ptr<TriangleMesh> SimplifyVertexClustering(
             double voxel_size,
-            SimplificationContraction contraction = SimplificationContraction::Average) const;
+            SimplificationContraction contraction =
+                    SimplificationContraction::Average) const;
 
     /// Function to simplify mesh using Quadric Error Metric Decimation by
     /// Garland and Heckbert.
-    std::shared_ptr<TriangleMesh> SimplifyQuadricDecimation(int target_number_of_triangles) const;
+    std::shared_ptr<TriangleMesh> SimplifyQuadricDecimation(
+            int target_number_of_triangles) const;
 
     /// Function to select points from \param input TriangleMesh into
     /// \return output TriangleMesh
     /// Vertices with indices in \param indices are selected.
-    std::shared_ptr<TriangleMesh> SelectDownSample(const std::vector<size_t> &indices) const;
+    std::shared_ptr<TriangleMesh> SelectDownSample(
+            const std::vector<size_t> &indices) const;
 
     /// Function to crop pointcloud into output pointcloud
     /// All points with coordinates outside the bounding box \param bbox are
     /// clipped.
-    std::shared_ptr<TriangleMesh> Crop(const AxisAlignedBoundingBox &bbox) const;
+    std::shared_ptr<TriangleMesh> Crop(
+            const AxisAlignedBoundingBox &bbox) const;
 
     /// Function to crop pointcloud into output pointcloud
     /// All points with coordinates outside the bounding box \param bbox are
@@ -358,18 +376,20 @@ public:
     /// https://github.com/mkazhdan/PoissonRecon
     ///
     /// \param pcd PointCloud with normals and optionally colors.
-    /// \param depth Maximum depth of the tree that will be used for surface reconstruction. Running
-    /// at depth d corresponds to solving on a grid whose resolution is no larger than 2^d x 2^d x
-    /// 2^d. Note that since the reconstructor adapts the octree to the sampling density, the
-    /// specified reconstruction depth is only an upper bound.
-    /// \param width Specifies the target
-    /// width of the finest level octree cells. This parameter is ignored if depth is specified.
-    /// \param scale Specifies the ratio between the diameter of the cube used for reconstruction
-    /// and the diameter of the samples' bounding cube.
-    /// \param linear_fit If true, the reconstructor
-    /// use linear interpolation to estimate the positions of iso-vertices.
-    /// \return The estimated
-    /// TriangleMesh, and per vertex densitie values that can be used to to trim the mesh.
+    /// \param depth Maximum depth of the tree that will be used for surface
+    /// reconstruction. Running at depth d corresponds to solving on a grid
+    /// whose resolution is no larger than 2^d x 2^d x 2^d. Note that since the
+    /// reconstructor adapts the octree to the sampling density, the specified
+    /// reconstruction depth is only an upper bound.
+    /// \param width Specifies the
+    /// target width of the finest level octree cells. This parameter is ignored
+    /// if depth is specified.
+    /// \param scale Specifies the ratio between the
+    /// diameter of the cube used for reconstruction and the diameter of the
+    /// samples' bounding cube. \param linear_fit If true, the reconstructor use
+    /// linear interpolation to estimate the positions of iso-vertices.
+    /// \return The estimated TriangleMesh, and per vertex densitie values that
+    /// can be used to to trim the mesh.
     static std::tuple<std::shared_ptr<TriangleMesh>, std::vector<double>>
     CreateFromPointCloudPoisson(const PointCloud &pcd,
                                 size_t depth = 8,
@@ -405,7 +425,8 @@ public:
     /// Its axis is aligned with z-axis.
     /// The longitudes will be split into \param resolution segments.
     /// The latitudes will be split into \param resolution * 2 segments.
-    static std::shared_ptr<TriangleMesh> CreateSphere(double radius = 1.0, int resolution = 20);
+    static std::shared_ptr<TriangleMesh> CreateSphere(double radius = 1.0,
+                                                      int resolution = 20);
 
     /// Factory function to create a cylinder mesh (TriangleMeshFactory.cpp)
     /// The axis of the cylinder will be from (0, 0, -height/2) to (0, 0,
@@ -431,10 +452,11 @@ public:
     /// torus_radius. The tube of the torus will have a radius of \param
     /// tube_radius. The number of segments in radial and tubular direction are
     /// \param radial_resolution and \param tubular_resolution respectively.
-    static std::shared_ptr<TriangleMesh> CreateTorus(double torus_radius = 1.0,
-                                                     double tube_radius = 0.5,
-                                                     int radial_resolution = 30,
-                                                     int tubular_resolution = 20);
+    static std::shared_ptr<TriangleMesh> CreateTorus(
+            double torus_radius = 1.0,
+            double tube_radius = 0.5,
+            int radial_resolution = 30,
+            int tubular_resolution = 20);
 
     /// Factory function to create an arrow mesh (TriangleMeshFactory.cpp)
     /// The axis of the cone with \param cone_radius will be along the z-axis.
@@ -446,20 +468,22 @@ public:
     /// The \param cylinder_height will be split into \param cylinder_split
     /// segments. The \param cone_height will be split into \param cone_split
     /// segments.
-    static std::shared_ptr<TriangleMesh> CreateArrow(double cylinder_radius = 1.0,
-                                                     double cone_radius = 1.5,
-                                                     double cylinder_height = 5.0,
-                                                     double cone_height = 4.0,
-                                                     int resolution = 20,
-                                                     int cylinder_split = 4,
-                                                     int cone_split = 1);
+    static std::shared_ptr<TriangleMesh> CreateArrow(
+            double cylinder_radius = 1.0,
+            double cone_radius = 1.5,
+            double cylinder_height = 5.0,
+            double cone_height = 4.0,
+            int resolution = 20,
+            int cylinder_split = 4,
+            int cone_split = 1);
 
     /// Factory function to create a coordinate frame mesh
     /// (TriangleMeshFactory.cpp) The coordinate frame will be centered at
     /// \param origin The x, y, z axis will be rendered as red, green, and blue
     /// arrows respectively. \param size is the length of the axes.
     static std::shared_ptr<TriangleMesh> CreateCoordinateFrame(
-            double size = 1.0, const Eigen::Vector3d &origin = Eigen::Vector3d(0.0, 0.0, 0.0));
+            double size = 1.0,
+            const Eigen::Vector3d &origin = Eigen::Vector3d(0.0, 0.0, 0.0));
 
     /// Factory function to create a Moebius strip. \param length_split
     /// defines the number of segments along the Moebius strip, \param
@@ -481,15 +505,16 @@ protected:
     // Forward child class type to avoid indirect nonvirtual base
     TriangleMesh(Geometry::GeometryType type) : MeshBase(type) {}
 
-    void FilterSmoothLaplacianHelper(std::shared_ptr<TriangleMesh> &mesh,
-                                     const std::vector<Eigen::Vector3d> &prev_vertices,
-                                     const std::vector<Eigen::Vector3d> &prev_vertex_normals,
-                                     const std::vector<Eigen::Vector3d> &prev_vertex_colors,
-                                     const std::vector<std::unordered_set<int>> &adjacency_list,
-                                     double lambda,
-                                     bool filter_vertex,
-                                     bool filter_normal,
-                                     bool filter_color) const;
+    void FilterSmoothLaplacianHelper(
+            std::shared_ptr<TriangleMesh> &mesh,
+            const std::vector<Eigen::Vector3d> &prev_vertices,
+            const std::vector<Eigen::Vector3d> &prev_vertex_normals,
+            const std::vector<Eigen::Vector3d> &prev_vertex_colors,
+            const std::vector<std::unordered_set<int>> &adjacency_list,
+            double lambda,
+            bool filter_vertex,
+            bool filter_normal,
+            bool filter_color) const;
 
 public:
     std::vector<Eigen::Vector3i> triangles_;

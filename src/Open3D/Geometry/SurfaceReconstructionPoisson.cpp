@@ -38,7 +38,8 @@
 #define DATA_DEGREE 0
 // The order of the B-Spline used to splat in the weights for density estimation
 #define WEIGHT_DEGREE 2
-// The order of the B-Spline used to splat in the normals for constructing the Laplacian constraints
+// The order of the B-Spline used to splat in the normals for constructing the
+// Laplacian constraints
 #define NORMAL_DEGREE 2
 // The default finite-element degree
 #define DEFAULT_FEM_DEGREE 1
@@ -66,10 +67,15 @@ namespace poisson {
 class Open3DData {
 public:
     Open3DData() : normal_(0, 0, 0), color_(0, 0, 0) {}
-    Open3DData(Eigen::Vector3d normal, Eigen::Vector3d color) : normal_(normal), color_(color) {}
+    Open3DData(Eigen::Vector3d normal, Eigen::Vector3d color)
+        : normal_(normal), color_(color) {}
 
-    Open3DData operator*(double s) const { return Open3DData(s * normal_, s * color_); }
-    Open3DData operator/(double s) const { return Open3DData((1 / s) * normal_, (1 / s) * color_); }
+    Open3DData operator*(double s) const {
+        return Open3DData(s * normal_, s * color_);
+    }
+    Open3DData operator/(double s) const {
+        return Open3DData((1 / s) * normal_, (1 / s) * color_);
+    }
     Open3DData& operator+=(const Open3DData& d) {
         normal_ = normal_ + d.normal_;
         color_ = color_ + d.color_;
@@ -87,7 +93,8 @@ public:
 };
 
 template <typename Real>
-class Open3DPointStream : public InputPointStreamWithData<Real, DIMENSION, Open3DData> {
+class Open3DPointStream
+    : public InputPointStreamWithData<Real, DIMENSION, Open3DData> {
 public:
     Open3DPointStream(const open3d::geometry::PointCloud* pcd)
         : pcd_(pcd), xform_(nullptr), current_(0) {}
@@ -132,7 +139,8 @@ public:
     typedef _Real Real;
 
     Open3DVertex() {}
-    Open3DVertex(Point<Real, 3> point) : point(point), normal_(0, 0, 0), color_(0, 0, 0), w_(0) {}
+    Open3DVertex(Point<Real, 3> point)
+        : point(point), normal_(0, 0, 0), color_(0, 0, 0), w_(0) {}
 
     Open3DVertex& operator*=(Real s) {
         point *= s;
@@ -159,7 +167,8 @@ public:
     }
 
 public:
-    // point can not have trailing _, because template methods assume that it is named this way
+    // point can not have trailing _, because template methods assume that it is
+    // named this way
     Point<Real, 3> point;
     Eigen::Vector3d normal_;
     Eigen::Vector3d color_;
@@ -172,11 +181,14 @@ struct FEMTreeProfiler {
     double t;
 
     FEMTreeProfiler(FEMTree<Dim, Real>& t) : tree(t) { ; }
-    void start(void) { t = Time(), FEMTree<Dim, Real>::ResetLocalMemoryUsage(); }
+    void start(void) {
+        t = Time(), FEMTree<Dim, Real>::ResetLocalMemoryUsage();
+    }
     void dumpOutput(const char* header) const {
         FEMTree<Dim, Real>::MemoryUsage();
         if (header)
-            utility::LogDebug("{} {} (s), {} (MB) / {} (MB) / {} (MB)", header, Time() - t,
+            utility::LogDebug("{} {} (s), {} (MB) / {} (MB) / {} (MB)", header,
+                              Time() - t,
                               FEMTree<Dim, Real>::LocalMemoryUsage(),
                               FEMTree<Dim, Real>::MaxMemoryUsage(),
                               MemoryInfo::PeakMemoryUsageMB());
@@ -194,17 +206,22 @@ XForm<Real, Dim + 1> GetBoundingBoxXForm(Point<Real, Dim> min,
                                          Real scaleFactor) {
     Point<Real, Dim> center = (max + min) / 2;
     Real scale = max[0] - min[0];
-    for (int d = 1; d < Dim; d++) scale = std::max<Real>(scale, max[d] - min[d]);
+    for (int d = 1; d < Dim; d++)
+        scale = std::max<Real>(scale, max[d] - min[d]);
     scale *= scaleFactor;
     for (int i = 0; i < Dim; i++) center[i] -= scale / 2;
     XForm<Real, Dim + 1> tXForm = XForm<Real, Dim + 1>::Identity(),
                          sXForm = XForm<Real, Dim + 1>::Identity();
-    for (int i = 0; i < Dim; i++) sXForm(i, i) = (Real)(1. / scale), tXForm(Dim, i) = -center[i];
+    for (int i = 0; i < Dim; i++)
+        sXForm(i, i) = (Real)(1. / scale), tXForm(Dim, i) = -center[i];
     return sXForm * tXForm;
 }
 template <class Real, unsigned int Dim>
-XForm<Real, Dim + 1> GetBoundingBoxXForm(
-        Point<Real, Dim> min, Point<Real, Dim> max, Real width, Real scaleFactor, int& depth) {
+XForm<Real, Dim + 1> GetBoundingBoxXForm(Point<Real, Dim> min,
+                                         Point<Real, Dim> max,
+                                         Real width,
+                                         Real scaleFactor,
+                                         int& depth) {
     // Get the target resolution (along the largest dimension)
     Real resolution = (max[0] - min[0]) / width;
     for (int d = 1; d < Dim; d++)
@@ -219,7 +236,8 @@ XForm<Real, Dim + 1> GetBoundingBoxXForm(
     for (int i = 0; i < Dim; i++) center[i] -= scale / 2;
     XForm<Real, Dim + 1> tXForm = XForm<Real, Dim + 1>::Identity(),
                          sXForm = XForm<Real, Dim + 1>::Identity();
-    for (int i = 0; i < Dim; i++) sXForm(i, i) = (Real)(1. / scale), tXForm(Dim, i) = -center[i];
+    for (int i = 0; i < Dim; i++)
+        sXForm(i, i) = (Real)(1. / scale), tXForm(Dim, i) = -center[i];
     return sXForm * tXForm;
 }
 
@@ -233,7 +251,8 @@ XForm<Real, Dim + 1> GetPointXForm(InputPointStream<Real, Dim>& stream,
     return GetBoundingBoxXForm(min, max, width, scaleFactor, depth);
 }
 template <class Real, unsigned int Dim>
-XForm<Real, Dim + 1> GetPointXForm(InputPointStream<Real, Dim>& stream, Real scaleFactor) {
+XForm<Real, Dim + 1> GetPointXForm(InputPointStream<Real, Dim>& stream,
+                                   Real scaleFactor) {
     Point<Real, Dim> min, max;
     stream.boundingBox(min, max);
     return GetBoundingBoxXForm(min, max, scaleFactor);
@@ -243,7 +262,8 @@ template <unsigned int Dim, typename Real>
 struct ConstraintDual {
     Real target, weight;
     ConstraintDual(Real t, Real w) : target(t), weight(w) {}
-    CumulativeDerivativeValues<Real, Dim, 0> operator()(const Point<Real, Dim>& p) const {
+    CumulativeDerivativeValues<Real, Dim, 0> operator()(
+            const Point<Real, Dim>& p) const {
         return CumulativeDerivativeValues<Real, Dim, 0>(target * weight);
     };
 };
@@ -287,9 +307,11 @@ void ExtractMesh(
         FEMTree<sizeof...(FEMSigs), Real>& tree,
         const DenseNodeData<Real, UIntPack<FEMSigs...>>& solution,
         Real isoValue,
-        const std::vector<typename FEMTree<sizeof...(FEMSigs), Real>::PointSample>* samples,
+        const std::vector<typename FEMTree<sizeof...(FEMSigs),
+                                           Real>::PointSample>* samples,
         std::vector<Open3DData>* sampleData,
-        const typename FEMTree<sizeof...(FEMSigs), Real>::template DensityEstimator<WEIGHT_DEGREE>*
+        const typename FEMTree<sizeof...(FEMSigs),
+                               Real>::template DensityEstimator<WEIGHT_DEGREE>*
                 density,
         const SetVertexFunction& SetVertex,
         XForm<Real, sizeof...(FEMSigs) + 1> iXForm,
@@ -297,8 +319,11 @@ void ExtractMesh(
         std::vector<double>& out_densities) {
     static const int Dim = sizeof...(FEMSigs);
     typedef UIntPack<FEMSigs...> Sigs;
-    static const unsigned int DataSig = FEMDegreeAndBType<DATA_DEGREE, BOUNDARY_FREE>::Signature;
-    typedef typename FEMTree<Dim, Real>::template DensityEstimator<WEIGHT_DEGREE> DensityEstimator;
+    static const unsigned int DataSig =
+            FEMDegreeAndBType<DATA_DEGREE, BOUNDARY_FREE>::Signature;
+    typedef typename FEMTree<Dim,
+                             Real>::template DensityEstimator<WEIGHT_DEGREE>
+            DensityEstimator;
 
     FEMTreeProfiler<Dim, Real> profiler(tree);
 
@@ -311,24 +336,28 @@ void ExtractMesh(
     profiler.start();
     typename IsoSurfaceExtractor<Dim, Real, Vertex>::IsoStats isoStats;
     if (sampleData) {
-        SparseNodeData<ProjectiveData<Open3DData, Real>, IsotropicUIntPack<Dim, DataSig>>
-                _sampleData = tree.template setMultiDepthDataField<DataSig, false>(
-                        *samples, *sampleData, (DensityEstimator*)NULL);
-        for (const RegularTreeNode<Dim, FEMTreeNodeData, depth_and_offset_type>* n =
-                     tree.tree().nextNode();
+        SparseNodeData<ProjectiveData<Open3DData, Real>,
+                       IsotropicUIntPack<Dim, DataSig>>
+                _sampleData =
+                        tree.template setMultiDepthDataField<DataSig, false>(
+                                *samples, *sampleData, (DensityEstimator*)NULL);
+        for (const RegularTreeNode<Dim, FEMTreeNodeData, depth_and_offset_type>*
+                     n = tree.tree().nextNode();
              n; n = tree.tree().nextNode(n)) {
             ProjectiveData<Open3DData, Real>* clr = _sampleData(n);
             if (clr) (*clr) *= (Real)pow(datax, tree.depth(n));
         }
-        isoStats = IsoSurfaceExtractor<Dim, Real, Vertex>::template Extract<Open3DData>(
-                Sigs(), UIntPack<WEIGHT_DEGREE>(), UIntPack<DataSig>(), tree, density, &_sampleData,
-                solution, isoValue, *mesh, SetVertex, !linear_fit, !non_manifold, polygon_mesh,
-                false);
+        isoStats = IsoSurfaceExtractor<Dim, Real, Vertex>::template Extract<
+                Open3DData>(Sigs(), UIntPack<WEIGHT_DEGREE>(),
+                            UIntPack<DataSig>(), tree, density, &_sampleData,
+                            solution, isoValue, *mesh, SetVertex, !linear_fit,
+                            !non_manifold, polygon_mesh, false);
     } else {
-        isoStats = IsoSurfaceExtractor<Dim, Real, Vertex>::template Extract<Open3DData>(
-                Sigs(), UIntPack<WEIGHT_DEGREE>(), UIntPack<DataSig>(), tree, density, NULL,
-                solution, isoValue, *mesh, SetVertex, !linear_fit, !non_manifold, polygon_mesh,
-                false);
+        isoStats = IsoSurfaceExtractor<Dim, Real, Vertex>::template Extract<
+                Open3DData>(Sigs(), UIntPack<WEIGHT_DEGREE>(),
+                            UIntPack<DataSig>(), tree, density, NULL, solution,
+                            isoValue, *mesh, SetVertex, !linear_fit,
+                            !non_manifold, polygon_mesh, false);
     }
 
     mesh->resetIterator();
@@ -336,7 +365,9 @@ void ExtractMesh(
     for (size_t vidx = 0; vidx < mesh->outOfCorePointCount(); ++vidx) {
         Vertex v;
         mesh->nextOutOfCorePoint(v);
-        out_mesh->vertices_.push_back(Eigen::Vector3d(v.point[0], v.point[1], v.point[2]));
+        v.point = iXForm * v.point;
+        out_mesh->vertices_.push_back(
+                Eigen::Vector3d(v.point[0], v.point[1], v.point[2]));
         out_mesh->vertex_normals_.push_back(v.normal_);
         out_mesh->vertex_colors_.push_back(v.color_);
         out_densities.push_back(v.w_);
@@ -347,8 +378,8 @@ void ExtractMesh(
         if (triangle.size() != 3) {
             open3d::utility::LogError("got polygon");
         } else {
-            out_mesh->triangles_.push_back(
-                    Eigen::Vector3i(triangle[0].idx, triangle[1].idx, triangle[2].idx));
+            out_mesh->triangles_.push_back(Eigen::Vector3i(
+                    triangle[0].idx, triangle[1].idx, triangle[2].idx));
         }
     }
 
@@ -367,13 +398,15 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     static const int Dim = sizeof...(FEMSigs);
     typedef UIntPack<FEMSigs...> Sigs;
     typedef UIntPack<FEMSignature<FEMSigs>::Degree...> Degrees;
-    typedef UIntPack<
-            FEMDegreeAndBType<NORMAL_DEGREE, DerivativeBoundary<FEMSignature<FEMSigs>::BType,
-                                                                1>::BType>::Signature...>
+    typedef UIntPack<FEMDegreeAndBType<
+            NORMAL_DEGREE, DerivativeBoundary<FEMSignature<FEMSigs>::BType,
+                                              1>::BType>::Signature...>
             NormalSigs;
-    static const unsigned int DataSig = FEMDegreeAndBType<DATA_DEGREE, BOUNDARY_FREE>::Signature;
-    typedef typename FEMTree<Dim, Real>::template DensityEstimator<WEIGHT_DEGREE> DensityEstimator;
-    typedef typename FEMTree<Dim, Real>::template InterpolationInfo<Real, 0> InterpolationInfo;
+    typedef typename FEMTree<Dim,
+                             Real>::template DensityEstimator<WEIGHT_DEGREE>
+            DensityEstimator;
+    typedef typename FEMTree<Dim, Real>::template InterpolationInfo<Real, 0>
+            InterpolationInfo;
 
     XForm<Real, Dim + 1> xForm, iXForm;
     xForm = XForm<Real, Dim + 1>::Identity();
@@ -409,17 +442,23 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     {
         Open3DPointStream<Real> pointStream(&pcd);
 
-        if (width > 0)
-            xForm = GetPointXForm<Real, Dim>(pointStream, width, (Real)(scale > 0 ? scale : 1.),
+        if (width > 0) {
+            xForm = GetPointXForm<Real, Dim>(pointStream, width,
+                                             (Real)(scale > 0 ? scale : 1.),
                                              depth) *
                     xForm;
-        else
-            xForm = scale > 0 ? GetPointXForm<Real, Dim>(pointStream, (Real)scale) * xForm : xForm;
+        } else {
+            xForm = scale > 0 ? GetPointXForm<Real, Dim>(pointStream,
+                                                         (Real)scale) *
+                                        xForm
+                              : xForm;
+        }
 
         pointStream.xform_ = &xForm;
 
         {
-            auto ProcessDataWithConfidence = [&](const Point<Real, Dim>& p, Open3DData& d) {
+            auto ProcessDataWithConfidence = [&](const Point<Real, Dim>& p,
+                                                 Open3DData& d) {
                 Real l = (Real)d.normal_.norm();
                 if (!l || l != l) return (Real)-1.;
                 return (Real)pow(l, confidence);
@@ -431,18 +470,23 @@ void Execute(const open3d::geometry::PointCloud& pcd,
                 return (Real)1.;
             };
             if (confidence > 0) {
-                pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<Open3DData>(
-                        tree.spaceRoot(), pointStream, depth, samples, sampleData, true,
-                        tree.nodeAllocators[0], tree.initializer(), ProcessDataWithConfidence);
+                pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<
+                        Open3DData>(tree.spaceRoot(), pointStream, depth,
+                                    samples, sampleData, true,
+                                    tree.nodeAllocators[0], tree.initializer(),
+                                    ProcessDataWithConfidence);
             } else {
-                pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<Open3DData>(
-                        tree.spaceRoot(), pointStream, depth, samples, sampleData, true,
-                        tree.nodeAllocators[0], tree.initializer(), ProcessData);
+                pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<
+                        Open3DData>(tree.spaceRoot(), pointStream, depth,
+                                    samples, sampleData, true,
+                                    tree.nodeAllocators[0], tree.initializer(),
+                                    ProcessData);
             }
         }
         iXForm = xForm.inverse();
 
-        utility::LogDebug("Input Points / Samples: {} / {}", pointCount, samples.size());
+        utility::LogDebug("Input Points / Samples: {} / {}", pointCount,
+                          samples.size());
     }
 
     // int kernelDepth = KernelDepth.set ? KernelDepth.value : Depth.value - 2;
@@ -463,8 +507,8 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         // Get the kernel density estimator
         {
             profiler.start();
-            density = tree.template setDensityEstimator<WEIGHT_DEGREE>(samples, kernelDepth,
-                                                                       samples_per_node, 1);
+            density = tree.template setDensityEstimator<WEIGHT_DEGREE>(
+                    samples, kernelDepth, samples_per_node, 1);
             profiler.dumpOutput("#   Got kernel density:");
         }
 
@@ -472,53 +516,65 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         {
             profiler.start();
             normalInfo = new SparseNodeData<Point<Real, Dim>, NormalSigs>();
-            std::function<bool(Open3DData, Point<Real, Dim>&)> ConversionFunction =
-                    [](Open3DData in, Point<Real, Dim>& out) {
+            std::function<bool(Open3DData, Point<Real, Dim>&)>
+                    ConversionFunction =
+                            [](Open3DData in, Point<Real, Dim>& out) {
+                                // Point<Real, Dim> n = in.template data<0>();
+                                Point<Real, Dim> n(in.normal_(0), in.normal_(1),
+                                                   in.normal_(2));
+                                Real l = (Real)Length(n);
+                                // It is possible that the samples have non-zero
+                                // normals but there are two co-located samples
+                                // with negative normals...
+                                if (!l) return false;
+                                out = n / l;
+                                return true;
+                            };
+            std::function<bool(Open3DData, Point<Real, Dim>&, Real&)>
+                    ConversionAndBiasFunction = [&](Open3DData in,
+                                                    Point<Real, Dim>& out,
+                                                    Real& bias) {
                         // Point<Real, Dim> n = in.template data<0>();
-                        Point<Real, Dim> n(in.normal_(0), in.normal_(1), in.normal_(2));
+                        Point<Real, Dim> n(in.normal_(0), in.normal_(1),
+                                           in.normal_(2));
                         Real l = (Real)Length(n);
-                        // It is possible that the samples have non-zero normals but there are
-                        // two co-located samples with negative normals...
+                        // It is possible that the samples have non-zero normals
+                        // but there are two co-located samples with negative
+                        // normals...
                         if (!l) return false;
                         out = n / l;
-                        return true;
-                    };
-            std::function<bool(Open3DData, Point<Real, Dim>&, Real&)> ConversionAndBiasFunction =
-                    [&](Open3DData in, Point<Real, Dim>& out, Real& bias) {
-                        // Point<Real, Dim> n = in.template data<0>();
-                        Point<Real, Dim> n(in.normal_(0), in.normal_(1), in.normal_(2));
-                        Real l = (Real)Length(n);
-                        // It is possible that the samples have non-zero normals but
-                        // there are two co-located samples with negative normals...
-                        if (!l) return false;
-                        out = n / l;
-                        bias = (Real)(log(l) * confidence_bias / log(1 << (Dim - 1)));
+                        bias = (Real)(log(l) * confidence_bias /
+                                      log(1 << (Dim - 1)));
                         return true;
                     };
             if (confidence_bias > 0) {
-                *normalInfo = tree.setDataField(NormalSigs(), samples, sampleData, density,
-                                                pointWeightSum, ConversionAndBiasFunction);
+                *normalInfo = tree.setDataField(
+                        NormalSigs(), samples, sampleData, density,
+                        pointWeightSum, ConversionAndBiasFunction);
             } else {
-                *normalInfo = tree.setDataField(NormalSigs(), samples, sampleData, density,
-                                                pointWeightSum, ConversionFunction);
+                *normalInfo = tree.setDataField(
+                        NormalSigs(), samples, sampleData, density,
+                        pointWeightSum, ConversionFunction);
             }
-            ThreadPool::Parallel_for(0, normalInfo->size(), [&](unsigned int, size_t i) {
-                (*normalInfo)[i] *= (Real)-1.;
-            });
+            ThreadPool::Parallel_for(0, normalInfo->size(),
+                                     [&](unsigned int, size_t i) {
+                                         (*normalInfo)[i] *= (Real)-1.;
+                                     });
             profiler.dumpOutput("#     Got normal field:");
-            utility::LogDebug("Point weight / Estimated Area: {:e} / {:e}", pointWeightSum,
-                              pointCount * pointWeightSum);
+            utility::LogDebug("Point weight / Estimated Area: {:e} / {:e}",
+                              pointWeightSum, pointCount * pointWeightSum);
         }
 
         // Trim the tree and prepare for multigrid
         {
             profiler.start();
-            constexpr int MAX_DEGREE =
-                    NORMAL_DEGREE > Degrees::Max() ? NORMAL_DEGREE : Degrees::Max();
+            constexpr int MAX_DEGREE = NORMAL_DEGREE > Degrees::Max()
+                                               ? NORMAL_DEGREE
+                                               : Degrees::Max();
             tree.template finalizeForMultigrid<MAX_DEGREE>(
                     full_depth,
-                    typename FEMTree<Dim, Real>::template HasNormalDataFunctor<NormalSigs>(
-                            *normalInfo),
+                    typename FEMTree<Dim, Real>::template HasNormalDataFunctor<
+                            NormalSigs>(*normalInfo),
                     normalInfo, density);
             profiler.dumpOutput("#       Finalized tree:");
         }
@@ -527,8 +583,9 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         {
             profiler.start();
             constraints = tree.initDenseNodeData(Sigs());
-            typename FEMIntegrator::template Constraint<Sigs, IsotropicUIntPack<Dim, 1>, NormalSigs,
-                                                        IsotropicUIntPack<Dim, 0>, Dim>
+            typename FEMIntegrator::template Constraint<
+                    Sigs, IsotropicUIntPack<Dim, 1>, NormalSigs,
+                    IsotropicUIntPack<Dim, 0>, Dim>
                     F;
             unsigned int derivatives2[Dim];
             for (int d = 0; d < Dim; d++) derivatives2[d] = 0;
@@ -536,9 +593,12 @@ void Execute(const open3d::geometry::PointCloud& pcd,
             typedef IsotropicUIntPack<Dim, 0> Derivatives2;
             for (int d = 0; d < Dim; d++) {
                 unsigned int derivatives1[Dim];
-                for (int dd = 0; dd < Dim; dd++) derivatives1[dd] = dd == d ? 1 : 0;
-                F.weights[d][TensorDerivatives<Derivatives1>::Index(derivatives1)]
-                         [TensorDerivatives<Derivatives2>::Index(derivatives2)] = 1;
+                for (int dd = 0; dd < Dim; dd++)
+                    derivatives1[dd] = dd == d ? 1 : 0;
+                F.weights[d]
+                         [TensorDerivatives<Derivatives1>::Index(derivatives1)]
+                         [TensorDerivatives<Derivatives2>::Index(
+                                 derivatives2)] = 1;
             }
             tree.addFEMConstraints(F, *normalInfo, constraints, solveDepth);
             profiler.dumpOutput("#  Set FEM constraints:");
@@ -551,38 +611,55 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         if (point_weight > 0) {
             profiler.start();
             if (exact_interpolation) {
-                iInfo = FEMTree<Dim, Real>::template InitializeExactPointInterpolationInfo<Real, 0>(
-                        tree, samples,
-                        ConstraintDual<Dim, Real>(targetValue, (Real)point_weight * pointWeightSum),
-                        SystemDual<Dim, Real>((Real)point_weight * pointWeightSum), true, false);
+                iInfo = FEMTree<Dim, Real>::
+                        template InitializeExactPointInterpolationInfo<Real, 0>(
+                                tree, samples,
+                                ConstraintDual<Dim, Real>(
+                                        targetValue,
+                                        (Real)point_weight * pointWeightSum),
+                                SystemDual<Dim, Real>((Real)point_weight *
+                                                      pointWeightSum),
+                                true, false);
             } else {
-                iInfo = FEMTree<Dim, Real>::template InitializeApproximatePointInterpolationInfo<
-                        Real, 0>(
-                        tree, samples,
-                        ConstraintDual<Dim, Real>(targetValue, (Real)point_weight * pointWeightSum),
-                        SystemDual<Dim, Real>((Real)point_weight * pointWeightSum), true, 1);
+                iInfo = FEMTree<Dim, Real>::
+                        template InitializeApproximatePointInterpolationInfo<
+                                Real, 0>(
+                                tree, samples,
+                                ConstraintDual<Dim, Real>(
+                                        targetValue,
+                                        (Real)point_weight * pointWeightSum),
+                                SystemDual<Dim, Real>((Real)point_weight *
+                                                      pointWeightSum),
+                                true, 1);
             }
             tree.addInterpolationConstraints(constraints, solveDepth, *iInfo);
             profiler.dumpOutput("#Set point constraints:");
         }
 
-        utility::LogDebug("Leaf Nodes / Active Nodes / Ghost Nodes: {} / {} / {}", tree.leaves(),
-                          tree.nodes(), tree.ghostNodes());
-        utility::LogDebug("Memory Usage: {:.3f} MB", float(MemoryInfo::Usage()) / (1 << 20));
+        utility::LogDebug(
+                "Leaf Nodes / Active Nodes / Ghost Nodes: {} / {} / {}",
+                tree.leaves(), tree.nodes(), tree.ghostNodes());
+        utility::LogDebug("Memory Usage: {:.3f} MB",
+                          float(MemoryInfo::Usage()) / (1 << 20));
 
         // Solve the linear system
         {
             profiler.start();
             typename FEMTree<Dim, Real>::SolverInfo sInfo;
-            sInfo.cgDepth = 0, sInfo.cascadic = true, sInfo.vCycles = 1, sInfo.iters = iters,
-            sInfo.cgAccuracy = cg_solver_accuracy,
-            sInfo.verbose = utility::Logger::i().verbosity_level_ == utility::VerbosityLevel::Debug,
-            sInfo.showResidual =
-                    utility::Logger::i().verbosity_level_ == utility::VerbosityLevel::Debug,
-            sInfo.showGlobalResidual = SHOW_GLOBAL_RESIDUAL_NONE, sInfo.sliceBlockSize = 1;
+            sInfo.cgDepth = 0, sInfo.cascadic = true, sInfo.vCycles = 1,
+            sInfo.iters = iters, sInfo.cgAccuracy = cg_solver_accuracy,
+            sInfo.verbose = utility::Logger::i().verbosity_level_ ==
+                            utility::VerbosityLevel::Debug,
+            sInfo.showResidual = utility::Logger::i().verbosity_level_ ==
+                                 utility::VerbosityLevel::Debug,
+            sInfo.showGlobalResidual = SHOW_GLOBAL_RESIDUAL_NONE,
+            sInfo.sliceBlockSize = 1;
             sInfo.baseDepth = base_depth, sInfo.baseVCycles = base_v_cycles;
-            typename FEMIntegrator::template System<Sigs, IsotropicUIntPack<Dim, 1>> F({0., 1.});
-            solution = tree.solveSystem(Sigs(), F, constraints, solveDepth, sInfo, iInfo);
+            typename FEMIntegrator::template System<Sigs,
+                                                    IsotropicUIntPack<Dim, 1>>
+                    F({0., 1.});
+            solution = tree.solveSystem(Sigs(), F, constraints, solveDepth,
+                                        sInfo, iInfo);
             profiler.dumpOutput("# Linear system solved:");
             if (iInfo) delete iInfo, iInfo = NULL;
         }
@@ -591,49 +668,63 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     {
         profiler.start();
         double valueSum = 0, weightSum = 0;
-        typename FEMTree<Dim, Real>::template MultiThreadedEvaluator<Sigs, 0> evaluator(&tree,
-                                                                                        solution);
+        typename FEMTree<Dim, Real>::template MultiThreadedEvaluator<Sigs, 0>
+                evaluator(&tree, solution);
         std::vector<double> valueSums(ThreadPool::NumThreads(), 0),
                 weightSums(ThreadPool::NumThreads(), 0);
-        ThreadPool::Parallel_for(0, samples.size(), [&](unsigned int thread, size_t j) {
-            ProjectiveData<Point<Real, Dim>, Real>& sample = samples[j].sample;
-            Real w = sample.weight;
-            if (w > 0)
-                weightSums[thread] += w,
-                        valueSums[thread] +=
-                        evaluator.values(sample.data / sample.weight, thread, samples[j].node)[0] *
-                        w;
-        });
+        ThreadPool::Parallel_for(
+                0, samples.size(), [&](unsigned int thread, size_t j) {
+                    ProjectiveData<Point<Real, Dim>, Real>& sample =
+                            samples[j].sample;
+                    Real w = sample.weight;
+                    if (w > 0)
+                        weightSums[thread] += w,
+                                valueSums[thread] +=
+                                evaluator.values(sample.data / sample.weight,
+                                                 thread, samples[j].node)[0] *
+                                w;
+                });
         for (size_t t = 0; t < valueSums.size(); t++)
             valueSum += valueSums[t], weightSum += weightSums[t];
         isoValue = (Real)(valueSum / weightSum);
         profiler.dumpOutput("Got average:");
-        utility::LogDebug("Iso-Value: {:e} = {:e} / {:e}", isoValue, valueSum, weightSum);
+        utility::LogDebug("Iso-Value: {:e} = {:e} / {:e}", isoValue, valueSum,
+                          weightSum);
     }
 
-    auto SetVertex = [](Open3DVertex<Real>& v, Point<Real, Dim> p, Real w, Open3DData d) {
+    auto SetVertex = [](Open3DVertex<Real>& v, Point<Real, Dim> p, Real w,
+                        Open3DData d) {
         v.point = p;
         v.normal_ = d.normal_;
         v.color_ = d.color_;
         v.w_ = w;
     };
     ExtractMesh<Open3DVertex<Real>, Real>(
-            datax, linear_fit, UIntPack<FEMSigs...>(), std::tuple<SampleData...>(), tree, solution,
-            isoValue, &samples, &sampleData, density, SetVertex, iXForm, out_mesh, out_densities);
+            datax, linear_fit, UIntPack<FEMSigs...>(),
+            std::tuple<SampleData...>(), tree, solution, isoValue, &samples,
+            &sampleData, density, SetVertex, iXForm, out_mesh, out_densities);
 
     if (density) delete density, density = NULL;
-    utility::LogDebug("#          Total Solve: {:9.1f} (s), {:9.1f} (MB)", Time() - startTime,
-                      FEMTree<Dim, Real>::MaxMemoryUsage());
+    utility::LogDebug("#          Total Solve: {:9.1f} (s), {:9.1f} (MB)",
+                      Time() - startTime, FEMTree<Dim, Real>::MaxMemoryUsage());
 }
 
 }  // namespace poisson
 
 std::tuple<std::shared_ptr<TriangleMesh>, std::vector<double>>
-TriangleMesh::CreateFromPointCloudPoisson(
-        const PointCloud& pcd, size_t depth, size_t width, float scale, bool linear_fit) {
+TriangleMesh::CreateFromPointCloudPoisson(const PointCloud& pcd,
+                                          size_t depth,
+                                          size_t width,
+                                          float scale,
+                                          bool linear_fit) {
     static const BoundaryType BType = DEFAULT_FEM_BOUNDARY;
-    typedef IsotropicUIntPack<DIMENSION, FEMDegreeAndBType</* Degree */ 1, BType>::Signature>
+    typedef IsotropicUIntPack<
+            DIMENSION, FEMDegreeAndBType</* Degree */ 1, BType>::Signature>
             FEMSigs;
+
+    if (!pcd.HasNormals()) {
+        utility::LogError("[CreateFromPointCloudPoisson] pcd has no normals");
+    }
 
 #ifdef _OPENMP
     ThreadPool::Init((ThreadPool::ParallelType)(int)ThreadPool::OPEN_MP,
@@ -645,7 +736,8 @@ TriangleMesh::CreateFromPointCloudPoisson(
 
     auto mesh = std::make_shared<TriangleMesh>();
     std::vector<double> densities;
-    poisson::Execute<float>(pcd, mesh, densities, depth, width, scale, linear_fit, FEMSigs());
+    poisson::Execute<float>(pcd, mesh, densities, depth, width, scale,
+                            linear_fit, FEMSigs());
 
     ThreadPool::Terminate();
 

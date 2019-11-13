@@ -10,7 +10,8 @@ import os
 
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../Misc"))
+sys.path.append(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "../Misc"))
 import meshes
 
 
@@ -19,8 +20,10 @@ if __name__ == "__main__":
 
     pcd = meshes.eagle()
     print(pcd)
-    # o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([pcd])
 
-    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=10)
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
+        pcd, depth=8)
     print(mesh)
-    o3d.visualization.draw_geometries([mesh])
+    o3d.visualization.draw_geometries([pcd, mesh])
+

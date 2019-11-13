@@ -28,6 +28,8 @@ DAMAGE.
 
 #include "PreProcessor.h"
 
+#define FAST_COMPILE
+
 #undef USE_DOUBLE  // If enabled, double-precesion is used
 
 #define DATA_DEGREE 0  // The order of the B-Spline used to splat in data for color interpolation
@@ -658,6 +660,12 @@ void Execute(int argc, char* argv[], UIntPack<FEMSigs...>) {
                                 true, tree.nodeAllocators[0], tree.initializer(), ProcessData);
         }
         iXForm = xForm.inverse();
+        printf("[[%f,%f,%f], [%f,%f,%f], [%f,%f,%f]]\n", xForm.coords[0][0], xForm.coords[0][1],
+               xForm.coords[0][2], xForm.coords[1][0], xForm.coords[1][1], xForm.coords[1][2],
+               xForm.coords[2][0], xForm.coords[2][1], xForm.coords[2][2]);
+        printf("[[%f,%f,%f], [%f,%f,%f], [%f,%f,%f]]\n", iXForm.coords[0][0], iXForm.coords[0][1],
+               iXForm.coords[0][2], iXForm.coords[1][0], iXForm.coords[1][1], iXForm.coords[1][2],
+               iXForm.coords[2][0], iXForm.coords[2][1], iXForm.coords[2][2]);
         delete pointStream;
 
         messageWriter("Input Points / Samples: %llu / %llu\n", (unsigned long long)pointCount,

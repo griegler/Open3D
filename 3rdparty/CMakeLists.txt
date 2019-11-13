@@ -316,6 +316,11 @@ INSTALL_HEADERS(fmt)
 # PoissonRecon
 set(poisson_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/PoissonRecon/)
 
+add_executable(PoissonRecon ${CMAKE_CURRENT_SOURCE_DIR}/PoissonRecon/poisson/PoissonRecon.cpp)
+target_include_directories(PoissonRecon PUBLIC ${PNG_INCLUDE_DIRS} ${JPEG_TURBO_INCLUDE_DIRS})
+target_compile_definitions(PoissonRecon PRIVATE FAST_COMPILE)
+
+
 list(APPEND 3RDPARTY_INCLUDE_DIRS
      # ${dirent_INCLUDE_DIRS} # fails on Linux, seems to require Windows headers
      ${EIGEN3_INCLUDE_DIRS}

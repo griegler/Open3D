@@ -31,13 +31,22 @@
 #include "poisson/Ply.h"
 #include "poisson/PointStreamData.h"
 
+namespace open3d {
+namespace geometry {
+
+namespace poisson {
 typedef Eigen::Matrix<double, 6, 1> Open3DData;
 // typedef Eigen::Matrix<double, 7, 1> Open3DData;
 
 class Open3DPointStream : public InputPointStreamWithData<double, DIMENSION, Open3DData> {
 public:
-    Open3DPointStream() {}
-    Open3DPointStream(const open3d::geometry::PointCloud* pcd) : pcd_(pcd), current_(0) {}
+    // Open3DPointStream() {}
+    Open3DPointStream(const open3d::geometry::PointCloud* pcd)
+        : pcd_(pcd), xform_(nullptr), current_(0) {
+        open3d::utility::LogDebug("O3DPointStream pcd.points {}", pcd_->points_.size());
+        open3d::utility::LogDebug("O3DPointStream pcd.colors {}", pcd_->colors_.size());
+        open3d::utility::LogDebug("O3DPointStream pcd.normals {}", pcd_->normals_.size());
+    }
     void reset(void) { current_ = 0; }
     bool nextPoint(Point<double, 3>& p, Open3DData& d) {
         if (current_ >= pcd_->points_.size()) {
@@ -46,6 +55,10 @@ public:
         p.coords[0] = pcd_->points_[current_](0);
         p.coords[1] = pcd_->points_[current_](1);
         p.coords[2] = pcd_->points_[current_](2);
+
+        if (xform_ != nullptr) {
+            p = (*xform_) * p;
+        }
 
         if (pcd_->HasNormals()) {
             d(0) = pcd_->normals_[current_](0);
@@ -75,6 +88,7 @@ public:
 
 public:
     const open3d::geometry::PointCloud* pcd_;
+    XForm<double, 4>* xform_;
     size_t current_;
 };
 
@@ -143,11 +157,13 @@ struct FEMTreeProfiler {
         // if (header)
         //     messageWriter("%s %9.1f (s), %9.1f (MB) / %9.1f (MB) / %9.1f (MB)\n", header,
         //                   Time() - t, FEMTree<Dim, Real>::LocalMemoryUsage(),
-        //                   FEMTree<Dim, Real>::MaxMemoryUsage(), MemoryInfo::PeakMemoryUsageMB());
+        //                   FEMTree<Dim, Real>::MaxMemoryUsage(),
+        //                   MemoryInfo::PeakMemoryUsageMB());
         // else
         //     messageWriter("%9.1f (s), %9.1f (MB) / %9.1f (MB) / %9.1f (MB)\n", Time() - t,
         //                   FEMTree<Dim, Real>::LocalMemoryUsage(),
-        //                   FEMTree<Dim, Real>::MaxMemoryUsage(), MemoryInfo::PeakMemoryUsageMB());
+        //                   FEMTree<Dim, Real>::MaxMemoryUsage(),
+        //                   MemoryInfo::PeakMemoryUsageMB());
     }
     void dumpOutput2(std::vector<std::string>& comments, const char* header) const {
         FEMTree<Dim, Real>::MemoryUsage();
@@ -155,12 +171,14 @@ struct FEMTreeProfiler {
         //     messageWriter(comments, "%s %9.1f (s), %9.1f (MB) / %9.1f (MB) / %9.1f (MB)\n",
         //     header,
         //                   Time() - t, FEMTree<Dim, Real>::LocalMemoryUsage(),
-        //                   FEMTree<Dim, Real>::MaxMemoryUsage(), MemoryInfo::PeakMemoryUsageMB());
+        //                   FEMTree<Dim, Real>::MaxMemoryUsage(),
+        //                   MemoryInfo::PeakMemoryUsageMB());
         // else
-        //     messageWriter(comments, "%9.1f (s), %9.1f (MB) / %9.1f (MB) / %9.1f (MB)\n", Time() -
-        //     t,
+        //     messageWriter(comments, "%9.1f (s), %9.1f (MB) / %9.1f (MB) / %9.1f (MB)\n",
+        //     Time() - t,
         //                   FEMTree<Dim, Real>::LocalMemoryUsage(),
-        //                   FEMTree<Dim, Real>::MaxMemoryUsage(), MemoryInfo::PeakMemoryUsageMB());
+        //                   FEMTree<Dim, Real>::MaxMemoryUsage(),
+        //                   MemoryInfo::PeakMemoryUsageMB());
     }
 };
 
@@ -318,8 +336,8 @@ void ExtractMesh(
                 false);
     // #endif  // __GNUC__ || __GNUC__ < 4
     // messageWriter("Vertices / Polygons: %llu / %llu\n",
-    //               (unsigned long long)(mesh->outOfCorePointCount() + mesh->inCorePoints.size()),
-    //               (unsigned long long)mesh->polygonCount());
+    //               (unsigned long long)(mesh->outOfCorePointCount() +
+    //               mesh->inCorePoints.size()), (unsigned long long)mesh->polygonCount());
     std::string isoStatsString = isoStats.toString() + std::string("\n");
     // messageWriter(isoStatsString.c_str());
     // if (polygon_mesh)
@@ -364,13 +382,17 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     typedef typename FEMTree<Dim, Real>::template DensityEstimator<WEIGHT_DEGREE> DensityEstimator;
     typedef typename FEMTree<Dim, Real>::template InterpolationInfo<Real, 0> InterpolationInfo;
     // std::vector<std::string> comments;
-    // messageWriter(comments, "*************************************************************\n");
-    // messageWriter(comments, "*************************************************************\n");
+    // messageWriter(comments,
+    // "*************************************************************\n");
+    // messageWriter(comments,
+    // "*************************************************************\n");
     // messageWriter(comments, "** Running Screened Poisson Reconstruction (Version %s) **\n",
     //               VERSION);
-    // messageWriter(comments, "*************************************************************\n");
-    // messageWriter(comments, "*************************************************************\n");
-    // if (!Threads.set) messageWriter(comments, "Running with %d threads\n", Threads.value);
+    // messageWriter(comments,
+    // "*************************************************************\n");
+    // messageWriter(comments,
+    // "*************************************************************\n"); if (!Threads.set)
+    // messageWriter(comments, "Running with %d threads\n", Threads.value);
 
     XForm<Real, Dim + 1> xForm, iXForm;
     xForm = XForm<Real, Dim + 1>::Identity();
@@ -404,7 +426,7 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     Real pointWeightSum;
     std::vector<typename FEMTree<Dim, Real>::PointSample>* samples =
             new std::vector<typename FEMTree<Dim, Real>::PointSample>();
-    std::vector<Open3DData>* sampleData = NULL;
+    std::vector<Open3DData> sampleData;
     DensityEstimator* density = NULL;
     SparseNodeData<Point<Real, Dim>, NormalSigs>* normalInfo = NULL;
     Real targetValue = (Real)0.5;
@@ -419,6 +441,9 @@ void Execute(const open3d::geometry::PointCloud& pcd,
                     xForm;
         else
             xForm = scale > 0 ? GetPointXForm<Real, Dim>(pointStream, (Real)scale) * xForm : xForm;
+
+        pointStream.xform_ = &xForm;
+
         {
             auto ProcessDataWithConfidence = [&](const Point<Real, Dim>& p, Open3DData& d) {
                 // Real l = (Real)Length(d.template data<0>());
@@ -435,16 +460,23 @@ void Execute(const open3d::geometry::PointCloud& pcd,
             };
             if (confidence > 0)
                 pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<Open3DData>(
-                        tree.spaceRoot(), pointStream, depth, *samples, *sampleData, true,
+                        tree.spaceRoot(), pointStream, depth, *samples, sampleData, true,
                         tree.nodeAllocators[0], tree.initializer(), ProcessDataWithConfidence);
             else
                 pointCount = FEMTreeInitializer<Dim, Real>::template Initialize<Open3DData>(
-                        tree.spaceRoot(), pointStream, depth, *samples, *sampleData, true,
+                        tree.spaceRoot(), pointStream, depth, *samples, sampleData, true,
                         tree.nodeAllocators[0], tree.initializer(), ProcessData);
         }
         iXForm = xForm.inverse();
+        printf("[[%f,%f,%f], [%f,%f,%f], [%f,%f,%f]]\n", xForm.coords[0][0], xForm.coords[0][1],
+               xForm.coords[0][2], xForm.coords[1][0], xForm.coords[1][1], xForm.coords[1][2],
+               xForm.coords[2][0], xForm.coords[2][1], xForm.coords[2][2]);
+        printf("[[%f,%f,%f], [%f,%f,%f], [%f,%f,%f]]\n", iXForm.coords[0][0], iXForm.coords[0][1],
+               iXForm.coords[0][2], iXForm.coords[1][0], iXForm.coords[1][1], iXForm.coords[1][2],
+               iXForm.coords[2][0], iXForm.coords[2][1], iXForm.coords[2][2]);
 
-        // messageWriter("Input Points / Samples: %llu / %llu\n", (unsigned long long)pointCount,
+        // messageWriter("Input Points / Samples: %llu / %llu\n", (unsigned long
+        // long)pointCount,
         //               (unsigned long long)samples->size());
     }
     // end of read pcd
@@ -481,8 +513,8 @@ void Execute(const open3d::geometry::PointCloud& pcd,
                         // Point<Real, Dim> n = in.template data<0>();
                         Point<Real, Dim> n(in(0), in(1), in(2));
                         Real l = (Real)Length(n);
-                        // It is possible that the samples have non-zero normals but there are two
-                        // co-located samples with negative normals...
+                        // It is possible that the samples have non-zero normals but there are
+                        // two co-located samples with negative normals...
                         if (!l) return false;
                         out = n / l;
                         return true;
@@ -492,18 +524,18 @@ void Execute(const open3d::geometry::PointCloud& pcd,
                         // Point<Real, Dim> n = in.template data<0>();
                         Point<Real, Dim> n(in(0), in(1), in(2));
                         Real l = (Real)Length(n);
-                        // It is possible that the samples have non-zero normals but there
-                        // are two co-located samples with negative normals...
+                        // It is possible that the samples have non-zero normals but
+                        // there are two co-located samples with negative normals...
                         if (!l) return false;
                         out = n / l;
                         bias = (Real)(log(l) * confidence_bias / log(1 << (Dim - 1)));
                         return true;
                     };
             if (confidence_bias > 0)
-                *normalInfo = tree.setDataField(NormalSigs(), *samples, *sampleData, density,
+                *normalInfo = tree.setDataField(NormalSigs(), *samples, sampleData, density,
                                                 pointWeightSum, ConversionAndBiasFunction);
             else
-                *normalInfo = tree.setDataField(NormalSigs(), *samples, *sampleData, density,
+                *normalInfo = tree.setDataField(NormalSigs(), *samples, sampleData, density,
                                                 pointWeightSum, ConversionFunction);
             ThreadPool::Parallel_for(0, normalInfo->size(), [&](unsigned int, size_t i) {
                 (*normalInfo)[i] *= (Real)-1.;
@@ -514,7 +546,6 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         }
 
         if (!Density) delete density, density = NULL;
-        if (datax <= 0 || (!Colors && !Normals)) delete sampleData, sampleData = NULL;
 
         // Trim the tree and prepare for multigrid
         {
@@ -625,11 +656,7 @@ void Execute(const open3d::geometry::PointCloud& pcd,
         v.data(6) = w;
     };
     ExtractMesh<Open3DVertex>(UIntPack<FEMSigs...>(), std::tuple<SampleData...>(), tree, solution,
-                              isoValue, samples, sampleData, density, SetVertex, iXForm, out_mesh);
-    if (sampleData) {
-        delete sampleData;
-        sampleData = NULL;
-    }
+                              isoValue, samples, &sampleData, density, SetVertex, iXForm, out_mesh);
 
     if (density) delete density, density = NULL;
     // messageWriter(comments, "#          Total Solve: %9.1f (s), %9.1f (MB)\n", Time() -
@@ -637,70 +664,7 @@ void Execute(const open3d::geometry::PointCloud& pcd,
     //               FEMTree<Dim, Real>::MaxMemoryUsage());
 }
 
-// int main(int argc, char* argv[]) {
-//     Timer timer;
-// #ifdef USE_SEG_FAULT_HANDLER
-//     WARN("using seg-fault handler");
-//     StackTracer::exec = argv[0];
-//     signal(SIGSEGV, SignalHandler);
-// #endif  // USE_SEG_FAULT_HANDLER
-// #ifdef ARRAY_DEBUG
-//     WARN("Array debugging enabled");
-// #endif  // ARRAY_DEBUG
-//     cmdLineParse(argc - 1, &argv[1], params);
-//     if (MaxMemoryGB.value > 0) SetPeakMemoryMB(MaxMemoryGB.value << 10);
-//     ThreadPool::DefaultChunkSize = ThreadChunkSize.value;
-//     ThreadPool::DefaultSchedule = (ThreadPool::ScheduleType)ScheduleType.value;
-//     ThreadPool::Init((ThreadPool::ParallelType)ParallelType.value, Threads.value);
-
-//     messageWriter.echoSTDOUT = Verbose.set;
-//     if (!In.set) {
-//         ShowUsage(argv[0]);
-//         return 0;
-//     }
-//     if (DataX.value <= 0) Normals.set = Colors.set = false;
-//     if (BaseDepth.value > FullDepth.value) {
-//         if (BaseDepth.set)
-//             WARN("Base depth must be smaller than full depth: ", BaseDepth.value,
-//                  " <= ", FullDepth.value);
-//         BaseDepth.value = FullDepth.value;
-//     }
-
-// #ifdef USE_DOUBLE
-//     typedef double Real;
-// #else   // !USE_DOUBLE
-//     typedef float Real;
-// #endif  // USE_DOUBLE
-
-// #ifdef FAST_COMPILE
-//     static const int Degree = DEFAULT_FEM_DEGREE;
-//     static const BoundaryType BType = DEFAULT_FEM_BOUNDARY;
-//     typedef IsotropicUIntPack<DIMENSION, FEMDegreeAndBType<Degree, BType>::Signature>
-//     FEMSigs; WARN("Compiled for degree-", Degree, ", boundary-", BoundaryNames[BType], ", ",
-//          sizeof(Real) == 4 ? "single" : "double", "-precision _only_");
-//     if (!PointWeight.set) PointWeight.value = DefaultPointWeightMultiplier * Degree;
-//     if (Colors.set)
-//         Execute<Real, PointStreamColor<Real>>(argc, argv, FEMSigs());
-//     else
-//         Execute<Real>(argc, argv, FEMSigs());
-// #else   // !FAST_COMPILE
-//     if (!PointWeight.set) PointWeight.value = DefaultPointWeightMultiplier * Degree.value;
-//     if (Colors.set)
-//         Execute<DIMENSION, Real, PointStreamColor<float>>(argc, argv);
-//     else
-//         Execute<DIMENSION, Real>(argc, argv);
-// #endif  // FAST_COMPILE
-//     if (Performance.set) {
-//         printf("Time (Wall/CPU): %.2f / %.2f\n", timer.wallTime(), timer.cpuTime());
-//         printf("Peak Memory (MB): %d\n", MemoryInfo::PeakMemoryUsageMB());
-//     }
-
-//     ThreadPool::Terminate();
-//     return EXIT_SUCCESS;
-// }
-
-namespace open3d {
-namespace geometry {
+}  // namespace poisson
 
 std::shared_ptr<TriangleMesh> TriangleMesh::CreateFromPointCloudPoisson(const PointCloud& pcd) {
     static const BoundaryType BType = DEFAULT_FEM_BOUNDARY;
@@ -716,7 +680,7 @@ std::shared_ptr<TriangleMesh> TriangleMesh::CreateFromPointCloudPoisson(const Po
 #endif
 
     auto mesh = std::make_shared<TriangleMesh>();
-    Execute<double>(pcd, mesh, FEMSigs());
+    poisson::Execute<double>(pcd, mesh, FEMSigs());
 
     ThreadPool::Terminate();
 

@@ -16,7 +16,10 @@ import meshes
 
 
 if __name__ == "__main__":
+    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Debug)
+
     pcd = meshes.eagle()
     # o3d.visualization.draw_geometries([pcd])
 
     mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd)
+    __import__("ipdb").set_trace()

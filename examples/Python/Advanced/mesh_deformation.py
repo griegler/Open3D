@@ -19,11 +19,13 @@ def problem0():
     mesh = meshes.plane(height=1, width=1)
     mesh = mesh.subdivide_midpoint(3)
     vertices = np.asarray(mesh.vertices)
+    # fmt: off
     static_ids = [
         1, 46, 47, 48, 16, 51, 49, 50, 6, 31, 33, 32, 11, 26, 27, 25, 0, 64, 65,
         20, 66, 68, 67, 7, 69, 71, 70, 22, 72, 74, 73, 3, 15, 44, 43, 45, 5, 41,
         40, 42, 13, 39, 37, 38, 2, 56, 55, 19, 61, 60, 59, 8, 76, 75, 77, 23
     ]
+    # fmt: on
     static_positions = []
     for id in static_ids:
         static_positions.append(vertices[id])
@@ -37,9 +39,11 @@ def problem1():
     mesh = meshes.plane(height=1, width=1)
     mesh = mesh.subdivide_midpoint(3)
     vertices = np.asarray(mesh.vertices)
+    # fmt: off
     static_ids = [
         1, 46, 15, 43, 5, 40, 13, 38, 2, 56, 37, 39, 42, 41, 45, 44, 48, 47
     ]
+    # fmt: on
     static_positions = []
     for id in static_ids:
         static_positions.append(vertices[id])
@@ -62,11 +66,108 @@ def problem2():
     return mesh, static_ids + handle_ids, static_positions + handle_positions
 
 
+def select_vertices(mesh):
+    vertices = np.asarray(mesh.vertices)
+    vis = o3d.visualization.VisualizerWithVertexSelection()
+    vis.create_window("Select Vertices")
+    vis.add_geometry(mesh)
+    vis.run()
+    ids = [idx for idx in vis.get_picked_points()]
+    vis.destroy_window()
+    pos = [vertices[idx] for idx in ids]
+    return ids, pos
+
+
+class TransformPoints(object):
+
+    def __init__(self, mesh, points):
+        self.mesh = mesh
+        self.points = points
+
+        verts = np.asarray(self.mesh.vertices)
+        mins = verts.min(axis=0)
+        maxs = verts.max(axis=0)
+        self.delta_t = 0.02 * max(maxs - mins)
+
+    def escape_callback(self, vis):
+        self.run = False
+        return False
+
+    def translate(self, dim, dir):
+        t = np.zeros((3,))
+        t[dim] = dir * self.delta_t
+        self.points.translate(t)
+        return False
+
+    def rotate(self, dim, dir):
+        r = np.zeros((3,))
+        r[dim] = dir * np.pi / 180 * 5
+        R = o3d.geometry.get_rotation_matrix_from_xyz(r)
+        self.points.rotate(R)
+        return False
+
+    def run(self):
+        vis = o3d.visualization.VisualizerWithKeyCallback()
+        vis.create_window("Transform Vertices")
+        vis.add_geometry(self.mesh)
+        vis.add_geometry(self.points)
+
+        vis.register_key_callback(256, self.escape_callback)
+
+        vis.register_key_callback(ord("A"), lambda x: self.translate(0, -1))
+        vis.register_key_callback(ord("D"), lambda x: self.translate(0, +1))
+        vis.register_key_callback(ord("S"), lambda x: self.translate(1, -1))
+        vis.register_key_callback(ord("W"), lambda x: self.translate(1, +1))
+        vis.register_key_callback(ord("Q"), lambda x: self.translate(2, -1))
+        vis.register_key_callback(ord("E"), lambda x: self.translate(2, +1))
+
+        vis.register_key_callback(ord("G"), lambda x: self.rotate(0, -1))
+        vis.register_key_callback(ord("J"), lambda x: self.rotate(0, +1))
+        vis.register_key_callback(ord("H"), lambda x: self.rotate(1, -1))
+        vis.register_key_callback(ord("Y"), lambda x: self.rotate(1, +1))
+        vis.register_key_callback(ord("T"), lambda x: self.rotate(2, -1))
+        vis.register_key_callback(ord("U"), lambda x: self.rotate(2, +1))
+        print("Press A,D,S,W,Q,E to translate the points")
+        print("Press G,J,Y,H,T,U to rotate the points")
+        print("Press ESC to finish")
+
+        self.run = True
+        while self.run:
+            vis.update_geometry(self.points)
+            vis.poll_events()
+            vis.update_renderer()
+
+        return self.points
+
+
+def problem3():
+    mesh = o3d.io.read_triangle_mesh(
+        "/home/griegler/Desktop/Open3D/armadillo_1k.off"
+        # "/home/griegler/Desktop/Open3D/cactus_highres.off"
+    )
+    mesh.compute_vertex_normals()
+    # mesh = meshes.armadillo()
+    print("select static points")
+    static_ids, static_positions = select_vertices(mesh)
+    print("select moving points")
+    handle_ids, handle_positions = select_vertices(mesh)
+    print("transform the moving points")
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(handle_positions)
+    pcd.paint_uniform_color((1, 0, 0))
+    pcd = TransformPoints(mesh, pcd).run()
+    handle_positions = [v for v in np.asarray(pcd.points)]
+    return mesh, static_ids + handle_ids, static_positions + handle_positions
+
+
 if __name__ == "__main__":
     o3d.utility.set_verbosity_level(o3d.utility.Debug)
 
     for mesh, constraint_ids, constraint_pos in [
-            problem0(), problem1(), problem2()
+            # problem0(),
+            # problem1(),
+            # problem2(),
+            problem3()
     ]:
         constraint_ids = np.array(constraint_ids, dtype=np.int32)
         constraint_pos = o3d.utility.Vector3dVector(constraint_pos)

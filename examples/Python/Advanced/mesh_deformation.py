@@ -80,14 +80,35 @@ def select_vertices(mesh):
 
 class TransformPoints(object):
 
-    def __init__(self, mesh, points):
+    def __init__(self, mesh, static_ids, static_positions, handle_ids, handle_positions, deform=False):
         self.mesh = mesh
-        self.points = points
+        self.static_ids = static_ids
+        self.static_positions = static_positions
+        self.handle_ids = handle_ids
+        self.handle_positions = handle_positions
+        self.deform = deform
+
+        self.constraint_ids = np.array(self.static_ids + self.handle_ids, dtype=np.int32)
+
+        self.handle_points =  o3d.geometry.PointCloud()
+        self.handle_points.points = o3d.utility.Vector3dVector(handle_positions)
+        self.handle_points.paint_uniform_color((1, 0, 0))
+
+        self.static_points =  o3d.geometry.PointCloud()
+        self.static_points.points = o3d.utility.Vector3dVector(static_positions)
+        self.static_points.paint_uniform_color((0, 1, 0))
 
         verts = np.asarray(self.mesh.vertices)
         mins = verts.min(axis=0)
         maxs = verts.max(axis=0)
         self.delta_t = 0.02 * max(maxs - mins)
+
+    def deform_arap(self):
+        self.handle_positions = [v for v in np.asarray(self.handle_points.points)]
+        constraint_pos = o3d.utility.Vector3dVector(self.static_positions + self.handle_positions)
+        mesh = self.mesh.deform_as_rigid_as_possible(
+            o3d.utility.IntVector(self.constraint_ids), constraint_pos, max_iter=50)
+        self.mesh.vertices = mesh.vertices
 
     def escape_callback(self, vis):
         self.run = False
@@ -96,21 +117,26 @@ class TransformPoints(object):
     def translate(self, dim, dir):
         t = np.zeros((3,))
         t[dim] = dir * self.delta_t
-        self.points.translate(t)
+        self.handle_points.translate(t)
+        if self.deform:
+            self.deform_arap()
         return False
 
     def rotate(self, dim, dir):
         r = np.zeros((3,))
         r[dim] = dir * np.pi / 180 * 5
         R = o3d.geometry.get_rotation_matrix_from_xyz(r)
-        self.points.rotate(R)
+        self.handle_points.rotate(R)
+        if self.deform:
+            self.deform_arap()
         return False
 
     def run(self):
         vis = o3d.visualization.VisualizerWithKeyCallback()
         vis.create_window("Transform Vertices")
         vis.add_geometry(self.mesh)
-        vis.add_geometry(self.points)
+        vis.add_geometry(self.static_points)
+        vis.add_geometry(self.handle_points)
 
         vis.register_key_callback(256, self.escape_callback)
 
@@ -133,17 +159,22 @@ class TransformPoints(object):
 
         self.run = True
         while self.run:
-            vis.update_geometry(self.points)
+            vis.update_geometry(self.mesh)
+            vis.update_geometry(self.handle_points)
             vis.poll_events()
             vis.update_renderer()
 
-        return self.points
+        self.handle_positions = [v for v in np.asarray(self.handle_points.points)]
+        return self.handle_positions
 
 
 def problem3():
     mesh = o3d.io.read_triangle_mesh(
-        "/home/griegler/Desktop/Open3D/armadillo_1k.off"
+        # "/home/griegler/Desktop/Open3D/armadillo_1k.off"
         # "/home/griegler/Desktop/Open3D/cactus_highres.off"
+        # '/Users/griegler/Desktop/ballerina_10k.ply'
+        '/Users/griegler/Desktop/simple_hand.ply'
+        # '/Users/griegler/Desktop/cleopatra-s-needle-at-embankment-london-1.stl'
     )
     mesh.compute_vertex_normals()
     # mesh = meshes.armadillo()
@@ -152,11 +183,7 @@ def problem3():
     print("select moving points")
     handle_ids, handle_positions = select_vertices(mesh)
     print("transform the moving points")
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(handle_positions)
-    pcd.paint_uniform_color((1, 0, 0))
-    pcd = TransformPoints(mesh, pcd).run()
-    handle_positions = [v for v in np.asarray(pcd.points)]
+    handle_positions = TransformPoints(mesh, static_ids, static_positions, handle_ids, handle_positions, deform=True).run()
     return mesh, static_ids + handle_ids, static_positions + handle_positions
 
 
